@@ -1,0 +1,46 @@
+{
+  "projects": [
+    {
+      "name": "Customer Insights Portal",
+      "owner": "Priya Nair",
+      "status": "on-track",
+      "recentActivity": "Usability testing completed with positive feedback from pilot teams.",
+      "priority": "high"
+    },
+    {
+      "name": "Mobile Checkout Refresh",
+      "owner": "Marcus Lee",
+      "status": "at-risk",
+      "recentActivity": "Payment-provider review moved the release candidate by one week.",
+      "priority": "high"
+    },
+    {
+      "name": "Data Platform Migration",
+      "owner": "Sofia Alvarez",
+      "status": "blocked",
+      "recentActivity": "Waiting for security approval to provision the production data environment.",
+      "priority": "high"
+    },
+    {
+      "name": "Q3 Accessibility Upgrade",
+      "owner": "Jordan Kim",
+      "status": "completed",
+      "recentActivity": "Keyboard navigation and screen-reader acceptance review signed off.",
+      "priority": "medium"
+    },
+    {
+      "name": "Partner API v2",
+      "owner": "Elena Rossi",
+      "status": "planning",
+      "recentActivity": "Discovery workshop scheduled with the first three integration partners.",
+      "priority": "medium"
+    },
+    {
+      "name": "Team Knowledge Hub",
+      "owner": "Theo Martin",
+      "status": "on-track",
+      "recentActivity": "Content migration is 80% complete and the search prototype is in review.",
+      "priority": "low"
+    }
+  ]
+}

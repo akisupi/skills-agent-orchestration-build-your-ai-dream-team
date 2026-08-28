@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="A current view of project health, activity, and priorities.">
+    <title>Project Pulse</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+
+    <header class="site-header">
+      <a class="brand-link" href="index.html" aria-label="Project Pulse home">
+        <span class="brand-mark" aria-hidden="true">PP</span>
+        <span>Project Pulse</span>
+      </a>
+      <span class="header-meta">Delivery overview</span>
+    </header>
+
+    <main id="main-content" class="app-shell">
+      <section class="dashboard" aria-labelledby="dashboard-title">
+        <header class="dashboard-header">
+          <div class="dashboard-intro">
+            <p class="eyebrow">Team delivery overview</p>
+            <h1 id="dashboard-title" class="dashboard-title">Project Pulse</h1>
+            <p class="dashboard-description">
+              A quick read on what is moving, what needs attention, and where the team
+              is focused next.
+            </p>
+          </div>
+          <dl class="dashboard-summary" aria-label="Dashboard summary">
+            <div class="summary-item">
+              <dt class="summary-label">Projects tracked</dt>
+              <dd id="project-count" class="summary-value">Loading...</dd>
+            </div>
+          </dl>
+        </header>
+
+        <div class="dashboard-toolbar">
+          <div>
+            <h2 id="projects-heading">All projects</h2>
+            <p id="dashboard-message" role="status" aria-live="polite">Loading project data...</p>
+          </div>
+        </div>
+
+        <div id="project-grid" class="dashboard-grid" aria-labelledby="projects-heading"></div>
+      </section>
+    </main>
+
+    <noscript>
+      <div class="app-shell">
+        <section class="dashboard-error" role="alert" aria-labelledby="javascript-required-title">
+          <h2 id="javascript-required-title">JavaScript is required</h2>
+          <p>Enable JavaScript to load and display the project dashboard.</p>
+        </section>
+      </div>
+    </noscript>
+
+    <script>
+      (() => {
+        "use strict";
+
+        const dataUrl = "project-data.json";
+        const supportedStatuses = new Set([
+          "on-track",
+          "at-risk",
+          "blocked",
+          "completed",
+          "planning"
+        ]);
+        const supportedPriorities = new Set(["high", "medium", "low"]);
+        const projectGrid = document.querySelector("#project-grid");
+        const projectCount = document.querySelector("#project-count");
+        const dashboardMessage = document.querySelector("#dashboard-message");
+
+        function createElement(tagName, className, text) {
+          const element = document.createElement(tagName);
+          if (className) {
+            element.className = className;
+          }
+          if (text !== undefined) {
+            element.textContent = text;
+          }
+          return element;
+        }
+
+        function formatLabel(value) {
+          return value
+            .replace(/[-_]/g, " ")
+            .replace(/\b\w/g, (character) => character.toUpperCase());
+        }
+
+        function validateProjects(payload) {
+          if (!payload || !Array.isArray(payload.projects)) {
+            throw new Error('The data file must contain a top-level "projects" array.');
+          }
+
+          return payload.projects.map((project, index) => {
+            if (!project || typeof project !== "object") {
+              throw new Error(`Project ${index + 1} is not a valid object.`);
+            }
+
+            const requiredFields = ["name", "owner", "status", "recentActivity", "priority"];
+            const missingField = requiredFields.find(
+              (field) => typeof project[field] !== "string" || project[field].trim() === ""
+            );
+            if (missingField) {
+              throw new Error(`Project ${index + 1} is missing a valid ${missingField}.`);
+            }
+
+            const status = project.status.trim().toLowerCase();
+            const priority = project.priority.trim().toLowerCase();
+            if (!supportedStatuses.has(status)) {
+              throw new Error(`Project ${index + 1} has an unsupported status: ${project.status}.`);
+            }
+            if (!supportedPriorities.has(priority)) {
+              throw new Error(`Project ${index + 1} has an unsupported priority: ${project.priority}.`);
+            }
+
+            return {
+              name: project.name.trim(),
+              owner: project.owner.trim(),
+              status,
+              recentActivity: project.recentActivity.trim(),
+              priority
+            };
+          });
+        }
+
+        function createMetaRow(label, value) {
+          const row = createElement("div", "meta-row");
+          row.append(
+            createElement("dt", "meta-label", label),
+            createElement("dd", "meta-value", value)
+          );
+          return row;
+        }
+
+        function createProjectCard(project, index) {
+          const card = createElement("article", "project-card");
+          card.setAttribute("data-status", project.status);
+          card.setAttribute("data-priority", project.priority);
+          card.setAttribute("aria-labelledby", `project-title-${index}`);
+
+          const cardHeader = createElement("header", "project-card-header");
+          const title = createElement("h3", "project-card-title", project.name);
+          title.id = `project-title-${index}`;
+          cardHeader.append(title);
+
+          const owner = createElement("p", "project-card-description", `Owner: ${project.owner}`);
+          const cardBody = createElement("div", "project-card-body");
+          const metadata = createElement("dl", "project-card-meta");
+          metadata.append(createMetaRow("Recent activity", project.recentActivity));
+          cardBody.append(metadata);
+
+          const badges = createElement("div", "project-badges");
+          const statusBadge = createElement("span", "status-badge", formatLabel(project.status));
+          statusBadge.setAttribute("data-status", project.status);
+          statusBadge.setAttribute("aria-label", `Status: ${formatLabel(project.status)}`);
+          const priorityBadge = createElement("span", "priority-badge", `${formatLabel(project.priority)} priority`);
+          priorityBadge.setAttribute("data-priority", project.priority);
+          priorityBadge.setAttribute("aria-label", `Priority: ${formatLabel(project.priority)}`);
+          badges.append(statusBadge, priorityBadge);
+
+          const footer = createElement("footer", "project-card-footer");
+          footer.append(badges);
+          card.append(cardHeader, owner, cardBody, footer);
+          return card;
+        }
+
+        function showError(message) {
+          projectGrid.replaceChildren();
+          projectCount.textContent = "Unavailable";
+          dashboardMessage.className = "dashboard-error";
+          dashboardMessage.setAttribute("role", "alert");
+          dashboardMessage.replaceChildren(
+            createElement("strong", "", "Project data could not be loaded."),
+            document.createTextNode(` ${message}`)
+          );
+        }
+
+        function renderProjects(projects) {
+          projectGrid.replaceChildren();
+          projectCount.textContent = String(projects.length);
+          dashboardMessage.className = "";
+          dashboardMessage.setAttribute("role", "status");
+
+          if (projects.length === 0) {
+            const emptyState = createElement("section", "empty-state");
+            emptyState.setAttribute("aria-labelledby", "empty-state-title");
+            const emptyStateTitle = createElement("h2", "", "No projects yet");
+            emptyStateTitle.id = "empty-state-title";
+            emptyState.append(
+              emptyStateTitle,
+              createElement("p", "", "There are no projects to display in this pulse.")
+            );
+            projectGrid.append(emptyState);
+            dashboardMessage.textContent = "No project records found.";
+            return;
+          }
+
+          const fragment = document.createDocumentFragment();
+          projects.forEach((project, index) => {
+            fragment.append(createProjectCard(project, index));
+          });
+          projectGrid.append(fragment);
+          dashboardMessage.textContent = `${projects.length} project${projects.length === 1 ? "" : "s"} loaded.`;
+        }
+
+        async function loadProjects() {
+          try {
+            const response = await fetch(dataUrl, { cache: "no-store" });
+            if (!response.ok) {
+              throw new Error(`The server returned ${response.status} ${response.statusText}.`);
+            }
+            const payload = await response.json();
+            renderProjects(validateProjects(payload));
+          } catch (error) {
+            const message = error instanceof Error ? error.message : "An unexpected rendering error occurred.";
+            showError(message);
+          }
+        }
+
+        loadProjects();
+      })();
+    </script>
+  </body>
+</html>
